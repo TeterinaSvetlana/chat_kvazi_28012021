@@ -34,6 +34,8 @@ public class ClientHandler {
                                 out.writeUTF(Command.END);
                                 throw new RuntimeException("client want to disconnected");
                             }
+
+                            // for 2.7 task
                             if (str.startsWith(Command.AUTH)) {
                                 String[] token = str.split("\\s");
                                 String newNick = server.getAuthService()
