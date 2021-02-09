@@ -49,12 +49,8 @@ public class Server {
                 if ((c.getNickname().equals(receiver)) || (c.getNickname() == sender.getNickname())) {
                     c.sendMsg(message);
                 }
-//                c.sendMsg(message);
             }
         }
-//        for (ClientHandler c : clients) {
-//            c.sendMsg(message);
-//        }
     }
 
     public void subscribe(ClientHandler clientHandler){

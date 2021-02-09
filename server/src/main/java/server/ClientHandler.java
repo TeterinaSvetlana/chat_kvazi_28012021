@@ -68,8 +68,6 @@ public class ClientHandler {
                         } else {
                             server.broadcastMsg(this, null, str);
                         }
-
-//                        server.broadcastMsg(this, str);
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
