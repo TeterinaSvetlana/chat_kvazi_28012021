@@ -38,6 +38,7 @@ public class Server {
         }
     }
 
+    // for 2.7 task
     public void broadcastMsg(ClientHandler sender, String receiver, String msg){
         String message = String.format("[ %s ] : %s", sender.getNickname(), msg);
         if (receiver == null) {
