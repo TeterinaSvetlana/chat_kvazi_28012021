@@ -6,6 +6,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 
 public class ClientHandler {
     private Server server;
@@ -15,6 +16,7 @@ public class ClientHandler {
     private DataOutputStream out;
 
     private String nickname;
+    private String login;
 
     public ClientHandler(Server server, Socket socket) {
         try {
@@ -25,6 +27,7 @@ public class ClientHandler {
 
             new Thread(() -> {
                 try {
+                    socket.setSoTimeout(120000);  // task 2.8
                     //цикл аутентификации
                     while (true) {
                         String str = in.readUTF();
@@ -38,13 +41,33 @@ public class ClientHandler {
                                 String[] token = str.split("\\s");
                                 String newNick = server.getAuthService()
                                         .getNicknameByLoginAndPassword(token[1], token[2]);
+                                login = token[1];
                                 if (newNick != null) {
-                                    nickname = newNick;
-                                    sendMsg(Command.AUTH_OK + " " + nickname);
-                                    server.subscribe(this);
-                                    break;
+                                    if (!server.isLoginAuthenticated(login)) {
+                                        nickname = newNick;
+                                        sendMsg(Command.AUTH_OK + " " + nickname);
+                                        server.subscribe(this);
+                                        socket.setSoTimeout(0);
+                                        break;
+                                    } else {
+                                        sendMsg("С этим логинов уже вошли");
+                                    }
                                 } else {
                                     sendMsg("Неверный логин / пароль");
+                                }
+                            }
+
+                            if (str.startsWith(Command.REG)) {
+                                String[] token = str.split("\\s");
+                                if (token.length < 4) {
+                                    continue;
+                                }
+                                boolean regSuccessful = server.getAuthService()
+                                        .registration(token[1], token[2], token[3]);
+                                if (regSuccessful) {
+                                    sendMsg(Command.REG_OK);
+                                } else {
+                                    sendMsg(Command.REG_NO);
                                 }
                             }
                         }
@@ -54,21 +77,29 @@ public class ClientHandler {
                     while (true) {
                         String str = in.readUTF();
 
-                        if (str.equals(Command.END)) {
-                            out.writeUTF(Command.END);
-                            break;
-                        }
+                        if (str.startsWith("/")) {
+                            if (str.equals(Command.END)) {
+                                out.writeUTF(Command.END);
+                                break;
+                            }
 
-                        if (str.startsWith(Command.TO_RECEIVER)) {
-                            out.writeUTF(Command.TO_RECEIVER);
-                            String[] token = str.split("\\s", 3);
-                            String nickReceiver = token[1];
-                            String msg = token[2];
-                            server.broadcastMsg(this, nickReceiver, msg);
+                            if (str.startsWith(Command.PRIVATE_MSG)) {
+                                String[] token = str.split("\\s+", 3);
+                                if (token.length < 3) {
+                                    continue;
+                                }
+                                server.privateMsg(this, token[1], token[2]);
+                            }
                         } else {
-                            server.broadcastMsg(this, null, str);
+                            server.broadcastMsg(this, str);
                         }
                     }
+
+                // task 2.8
+                } catch (SocketTimeoutException e) {
+                    server.unsubscribe(this);
+                } catch (RuntimeException e) {
+                    System.out.println(e.getMessage());
                 } catch (IOException e) {
                     e.printStackTrace();
                 } finally {
@@ -97,5 +128,9 @@ public class ClientHandler {
 
     public String getNickname() {
         return nickname;
+    }
+
+    public String getLogin() {
+        return login;
     }
 }
