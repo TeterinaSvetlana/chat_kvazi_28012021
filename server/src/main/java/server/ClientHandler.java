@@ -7,6 +7,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.sql.SQLException;
 
 public class ClientHandler {
     private Server server;
@@ -82,6 +83,13 @@ public class ClientHandler {
                                 out.writeUTF(Command.END);
                                 break;
                             }
+                            if (str.startsWith(Command.CHANGE_NICK)) {
+                                String[] token = str.split("\\s+", 2);
+                                if (token.length < 2) {
+                                    continue;
+                                }
+                                changeNick(token[1]);
+                            }
 
                             if (str.startsWith(Command.PRIVATE_MSG)) {
                                 String[] token = str.split("\\s+", 3);
@@ -101,6 +109,8 @@ public class ClientHandler {
                 } catch (RuntimeException e) {
                     System.out.println(e.getMessage());
                 } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (SQLException e) {
                     e.printStackTrace();
                 } finally {
                     System.out.println("Client disconnected");
@@ -124,6 +134,11 @@ public class ClientHandler {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public void changeNick(String msg) throws SQLException {
+        server.changeNick(this.nickname, msg);
+        server.broadcastMsg(this, "change nickname to " + msg);
     }
 
     public String getNickname() {

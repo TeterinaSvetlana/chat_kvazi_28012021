@@ -30,6 +30,7 @@
     <HBox fx:id="messagePanel" visible="false" managed="false">
         <TextField fx:id="textField" promptText="input text" HBox.hgrow="ALWAYS" onAction="#sendMsg"/>
         <Button text="send" onAction="#sendMsg"/>
+        <Button text="change nick" onAction="#changeNick"/>
     </HBox>
 
 </VBox>

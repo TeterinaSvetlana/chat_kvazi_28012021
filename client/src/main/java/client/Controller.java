@@ -259,4 +259,19 @@ public class Controller implements Initializable {
             e.printStackTrace();
         }
     }
+
+    public void changeNick(ActionEvent actionEvent) {
+        try {
+            if (textField.getText().trim().length() > 0) {
+                String msg = String.format("%s %s", Command.CHANGE_NICK, textField.getText().trim());
+                out.writeUTF(msg);
+                textField.clear();
+                textField.requestFocus();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+
+    }
 }

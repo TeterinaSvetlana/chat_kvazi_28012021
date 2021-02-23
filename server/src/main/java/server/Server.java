@@ -5,6 +5,7 @@ import commands.Command;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -16,7 +17,7 @@ public class Server {
     private List<ClientHandler> clients;
     private AuthService authService;
 
-    public Server() {
+    public Server() throws SQLException, ClassNotFoundException {
         clients = new CopyOnWriteArrayList<>();
         authService = new SimpleAuthService();
         try {
@@ -34,6 +35,7 @@ public class Server {
         } finally {
             try {
                 server.close();
+                authService.closeDB();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -95,5 +97,9 @@ public class Server {
         for (ClientHandler c : clients) {
             c.sendMsg(message);
         }
+    }
+
+    public void changeNick(String oldNickname, String newNickname) throws SQLException {
+        authService.changeNickname(oldNickname, newNickname );
     }
 }
