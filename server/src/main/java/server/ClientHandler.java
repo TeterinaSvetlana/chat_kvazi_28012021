@@ -117,6 +117,7 @@ public class ClientHandler {
                     server.unsubscribe(this);
                     try {
                         socket.close();
+                        FileApi.cutTheFile();
                     } catch (IOException e) {
                         e.printStackTrace();
                     }

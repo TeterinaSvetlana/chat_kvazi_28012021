@@ -19,6 +19,7 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
+import server.FileApi;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -27,6 +28,7 @@ import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.URL;
+import java.util.List;
 import java.util.ResourceBundle;
 
 public class Controller implements Initializable {
@@ -59,7 +61,7 @@ public class Controller implements Initializable {
     private Stage regStage;
     private RegController regController;
 
-    public void setAuthenticated(boolean authenticated) {
+    public void setAuthenticated(boolean authenticated) throws IOException {
         this.authenticated = authenticated;
         messagePanel.setVisible(authenticated);
         messagePanel.setManaged(authenticated);
@@ -95,7 +97,11 @@ public class Controller implements Initializable {
             });
         });
 
-        setAuthenticated(false);
+        try {
+            setAuthenticated(false);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private void connect() {
@@ -104,74 +110,7 @@ public class Controller implements Initializable {
             in = new DataInputStream(socket.getInputStream());
             out = new DataOutputStream(socket.getOutputStream());
 
-            new Thread(() -> {
-                try {
-                    //цикл аутентификации
-                    while (true) {
-                        String str = in.readUTF();
-                        if (str.startsWith("/")) {
-                            if (str.equals(Command.END)) {
-                                System.out.println("server disconnected us");
-                                throw new RuntimeException("server disconnected us");
-                            }
-                            if (str.startsWith(Command.AUTH_OK)) {
-                                nickname = str.split("\\s")[1];
-                                setAuthenticated(true);
-                                break;
-                            }
-
-                            if (str.equals(Command.REG_OK)) {
-                                regController.resultTryToReg(true);
-                            }
-                            if (str.equals(Command.REG_NO)) {
-                                regController.resultTryToReg(false);
-                            }
-                        } else {
-                            textArea.appendText(str + "\n");
-                        }
-                    }
-
-                    //цикл работы
-                    while (true) {
-                        String str = in.readUTF();
-
-                        if (str.startsWith("/")) {
-                            if (str.equals(Command.END)) {
-                                setAuthenticated(false);
-                                break;
-                            }
-
-                            if (str.startsWith(Command.CLIENT_LIST)) {
-                                String[] token = str.split("\\s");
-                                Platform.runLater(() -> {
-                                    clientList.getItems().clear();
-                                    for (int i = 1; i < token.length; i++) {
-                                        clientList.getItems().add(token[i]);
-                                    }
-                                });
-                            }
-                        } else {
-                            textArea.appendText(str + "\n");
-                        }
-                    }
-
-                // task 2.8
-                } catch (EOFException e) {
-                    System.out.println("Time's ran out!");
-                } catch (RuntimeException e) {
-                    System.out.println(e.getMessage());
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } finally {
-                    setAuthenticated(false);
-                    try {
-                        socket.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-
-            }).start();
+            new Thread(this::run).start();
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -202,6 +141,23 @@ public class Controller implements Initializable {
             passwordField.clear();
         } catch (IOException e) {
             e.printStackTrace();
+        }
+        finally {
+
+            try {
+                printHistory();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void printHistory() throws IOException {
+        List<String> history = FileApi.read();
+        textArea.clear();
+        for (String msg: history) {
+            textArea.appendText(msg);
+            textArea.appendText("\n");
         }
     }
 
@@ -273,5 +229,78 @@ public class Controller implements Initializable {
         }
 
 
+    }
+
+    private void run() {
+        try {
+            //цикл аутентификации
+            while (true) {
+                String str = in.readUTF();
+                if (str.startsWith("/")) {
+                    if (str.equals(Command.END)) {
+                        System.out.println("server disconnected us");
+                        throw new RuntimeException("server disconnected us");
+                    }
+                    if (str.startsWith(Command.AUTH_OK)) {
+                        nickname = str.split("\\s")[1];
+                        setAuthenticated(true);
+                        FileApi.read();
+                        break;
+                    }
+
+                    if (str.equals(Command.REG_OK)) {
+                        regController.resultTryToReg(true);
+                    }
+                    if (str.equals(Command.REG_NO)) {
+                        regController.resultTryToReg(false);
+                    }
+                } else {
+                    textArea.appendText(str + "\n");
+                }
+            }
+
+            //цикл работы
+            while (true) {
+                String str = in.readUTF();
+
+                if (str.startsWith("/")) {
+                    if (str.equals(Command.END)) {
+                        setAuthenticated(false);
+                        break;
+                    }
+
+                    if (str.startsWith(Command.CLIENT_LIST)) {
+                        String[] token = str.split("\\s");
+                        Platform.runLater(() -> {
+                            clientList.getItems().clear();
+                            for (int i = 1; i < token.length; i++) {
+                                clientList.getItems().add(token[i]);
+                            }
+                        });
+                    }
+                } else {
+                    textArea.appendText(str + "\n");
+                }
+            }
+
+            // task 2.8
+        } catch (EOFException e) {
+            System.out.println("Time's ran out!");
+        } catch (RuntimeException e) {
+            System.out.println(e.getMessage());
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                setAuthenticated(false);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            try {
+                socket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 }

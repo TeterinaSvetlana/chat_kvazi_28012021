@@ -44,6 +44,7 @@ public class Server {
 
     public void broadcastMsg(ClientHandler sender, String msg) {
         String message = String.format("[ %s ] : %s", sender.getNickname(), msg);
+        FileApi.write(message);
         for (ClientHandler c : clients) {
             c.sendMsg(message);
         }
