@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.sql.SQLException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class ClientHandler {
     private Server server;
@@ -19,6 +21,9 @@ public class ClientHandler {
     private String nickname;
     private String login;
 
+    // task 3.4 - 2)
+    ExecutorService executorService;
+
     public ClientHandler(Server server, Socket socket) {
         try {
             this.server = server;
@@ -26,7 +31,9 @@ public class ClientHandler {
             in = new DataInputStream(socket.getInputStream());
             out = new DataOutputStream(socket.getOutputStream());
 
-            new Thread(() -> {
+            executorService = Executors.newFixedThreadPool(1);
+
+            executorService.execute(new Thread(() -> {
                 try {
                     socket.setSoTimeout(120000);  // task 2.8
                     //цикл аутентификации
@@ -122,7 +129,9 @@ public class ClientHandler {
                         e.printStackTrace();
                     }
                 }
-            }).start();
+            }));
+            executorService.shutdown();
+
 
         } catch (IOException e) {
             e.printStackTrace();
